@@ -27,7 +27,8 @@ def finish_ride_transaction(ride_id, payload_json):
         print(f"[DB] Writing to Outbox for {ride_id}")
         c.execute("INSERT INTO outbox (event_type, payload) VALUES (?, ?)", ("ride.finished", payload_json))
         
-        conn.commit() 
+        conn.commit()
+        return True
     except Exception as e:
         conn.rollback()
         print(f"Tx Error: {e}")
