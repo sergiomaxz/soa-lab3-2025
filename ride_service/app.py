@@ -39,23 +39,26 @@ def outbox_relay():
         time.sleep(5)
 
 def compensation_listener():
-    try:
-        connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
-        channel = connection.channel()
-        channel.queue_declare(queue='saga_compensations')
+    while True:
+        try:
+            print("[SAGA] Connecting to RabbitMQ for compensation...")
+            connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
+            channel = connection.channel()
+            channel.queue_declare(queue='saga_compensations')
 
-        def callback(ch, method, properties, body):
-            msg = json.loads(body)
-            ride_id = msg['ride_id']
-            reason = msg['reason']
-            print(f"[SAGA] Received failure signal for {ride_id}")
-            db.compensate_ride(ride_id, reason)
+            def callback(ch, method, properties, body):
+                msg = json.loads(body)
+                ride_id = msg['ride_id']
+                reason = msg['reason']
+                print(f"[SAGA] Received failure signal for {ride_id}")
+                db.compensate_ride(ride_id, reason)
 
-        print("[SAGA] Listening for compensations...")
-        channel.basic_consume(queue='saga_compensations', on_message_callback=callback, auto_ack=True)
-        channel.start_consuming()
-    except Exception as e:
-        print(f"Compensation Listener Error: {e}")
+            print("[SAGA] Listening for compensations...")
+            channel.basic_consume(queue='saga_compensations', on_message_callback=callback, auto_ack=True)
+            channel.start_consuming()
+        except Exception as e:
+            print(f"[SAGA Error] Compensation Listener Error: {e}")
+        time.sleep(5)
 
 @app.route('/create', methods=['POST'])
 def create():
